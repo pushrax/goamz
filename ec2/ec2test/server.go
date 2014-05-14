@@ -10,8 +10,8 @@ import (
 	"fmt"
 	"github.com/crowdmob/goamz/ec2"
 	"io"
-	"net"
 	"net/http"
+	"net/http/httptest"
 	"net/url"
 	"regexp"
 	"strconv"
@@ -42,10 +42,10 @@ type Action struct {
 
 // Server implements an EC2 simulator for use in testing.
 type Server struct {
-	url      string
-	listener net.Listener
-	mu       sync.Mutex
-	reqs     []*Action
+	url  string
+	s    *httptest.Server
+	mu   sync.Mutex
+	reqs []*Action
 
 	instances            map[string]*Instance      // id -> instance
 	reservations         map[string]*reservation   // id -> reservation
@@ -251,25 +251,23 @@ func NewServer() (*Server, error) {
 	}
 	srv.groups[g.id] = g
 
-	l, err := net.Listen("tcp", "localhost:0")
-	if err != nil {
-		return nil, fmt.Errorf("cannot listen on localhost: %v", err)
-	}
-	srv.listener = l
+	h := http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+		srv.serveHTTP(w, req)
+	})
 
-	srv.url = "http://" + l.Addr().String()
+	s := httptest.NewServer(h)
+	srv.s = s
+	srv.url = s.URL
 
 	// we use HandlerFunc rather than *Server directly so that we
 	// can avoid exporting HandlerFunc from *Server.
-	go http.Serve(l, http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
-		srv.serveHTTP(w, req)
-	}))
+
 	return srv, nil
 }
 
 // Quit closes down the server.
 func (srv *Server) Quit() {
-	srv.listener.Close()
+	srv.s.Close()
 }
 
 // SetInitialInstanceState sets the state that any new instances will be started in.
@@ -309,9 +307,10 @@ func (srv *Server) serveHTTP(w http.ResponseWriter, req *http.Request) {
 		}
 	}()
 
-	f := actions[req.Form.Get("Action")]
+	actionName := req.Form.Get("Action")
+	f := actions[actionName]
 	if f == nil {
-		fatalf(400, "InvalidParameterValue", "Unrecognized Action")
+		fatalf(400, "InvalidParameterValue", "Unrecognized Action %q", actionName)
 	}
 
 	response := f(srv, w, req, a.RequestId)
