@@ -17,7 +17,10 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 )
+
+var SpontaneousTransition = time.Millisecond * 20
 
 var b64 = base64.StdEncoding
 
@@ -43,6 +46,7 @@ type Action struct {
 // Server implements an EC2 simulator for use in testing.
 type Server struct {
 	url  string
+	done chan struct{}
 	s    *httptest.Server
 	mu   sync.Mutex
 	reqs []*Action
@@ -50,6 +54,7 @@ type Server struct {
 	instances            map[string]*Instance      // id -> instance
 	reservations         map[string]*reservation   // id -> reservation
 	groups               map[string]*securityGroup // id -> group
+	addresses            map[string]ec2.Address    // ip -> ec2.Address
 	maxId                counter
 	reqId                counter
 	reservationId        counter
@@ -194,6 +199,8 @@ var actions = map[string]func(*Server, http.ResponseWriter, *http.Request, strin
 	"RunInstances":                  (*Server).runInstances,
 	"TerminateInstances":            (*Server).terminateInstances,
 	"DescribeInstances":             (*Server).describeInstances,
+	"AssociateAddress":              (*Server).associateAddresses,
+	"DescribeAddresses":             (*Server).describeAddresses,
 	"CreateSecurityGroup":           (*Server).createSecurityGroup,
 	"DescribeSecurityGroups":        (*Server).describeSecurityGroups,
 	"DeleteSecurityGroup":           (*Server).deleteSecurityGroup,
@@ -217,9 +224,11 @@ func (srv *Server) newAction() *Action {
 // NewServer returns a new server.
 func NewServer() (*Server, error) {
 	srv := &Server{
+		done:                 make(chan struct{}),
 		instances:            make(map[string]*Instance),
 		groups:               make(map[string]*securityGroup),
 		reservations:         make(map[string]*reservation),
+		addresses:            make(map[string]ec2.Address),
 		initialInstanceState: Pending,
 	}
 
@@ -259,6 +268,26 @@ func NewServer() (*Server, error) {
 	srv.s = s
 	srv.url = s.URL
 
+	go func() {
+		tick := time.NewTicker(SpontaneousTransition)
+		for {
+			select {
+			case <-srv.done:
+				return
+			case <-tick.C:
+				srv.mu.Lock()
+				for _, inst := range srv.instances {
+					switch inst.state {
+					case Pending:
+						inst.state = Running
+					}
+				}
+				srv.mu.Unlock()
+
+			}
+		}
+	}()
+
 	// we use HandlerFunc rather than *Server directly so that we
 	// can avoid exporting HandlerFunc from *Server.
 
@@ -267,6 +296,7 @@ func NewServer() (*Server, error) {
 
 // Quit closes down the server.
 func (srv *Server) Quit() {
+	close(srv.done)
 	srv.s.Close()
 }
 
@@ -274,6 +304,15 @@ func (srv *Server) Quit() {
 func (srv *Server) SetInitialInstanceState(state ec2.InstanceState) {
 	srv.mu.Lock()
 	srv.initialInstanceState = state
+	srv.mu.Unlock()
+}
+
+// SetIpAddresses adds a set of IP addresses to
+func (srv *Server) SetIpAddresses(ips []string) {
+	srv.mu.Lock()
+	for _, ip := range ips {
+		srv.addresses[ip] = ec2.Address{PublicIp: ip}
+	}
 	srv.mu.Unlock()
 }
 
@@ -448,6 +487,7 @@ func (srv *Server) runInstances(w http.ResponseWriter, req *http.Request, reqId 
 		inst.UserData = userData
 		resp.Instances = append(resp.Instances, inst.ec2instance())
 	}
+
 	return &resp
 }
 
@@ -547,6 +587,7 @@ func (inst *Instance) ec2instance() ec2.Instance {
 		InstanceId:   inst.id,
 		InstanceType: inst.instType,
 		ImageId:      inst.imageId,
+		State:        inst.state,
 		DNSName:      fmt.Sprintf("%s.example.com", inst.id),
 		// TODO the rest
 	}
@@ -724,6 +765,55 @@ func (srv *Server) describeSecurityGroups(w http.ResponseWriter, req *http.Reque
 			fatalf(400, "InvalidParameterValue", "describe security groups: %v", err)
 		}
 	}
+	return &resp
+}
+
+func (srv *Server) associateAddresses(w http.ResponseWriter, req *http.Request, reqId string) interface{} {
+	srv.mu.Lock()
+	defer srv.mu.Unlock()
+
+	var instID string
+	var ipAddr string
+	for key, val := range req.Form {
+		switch key {
+		case "InstanceId":
+			instID = val[0]
+		case "PublicIp":
+			ipAddr = val[0]
+		}
+	}
+
+	switch {
+	case instID == "":
+		fatalf(400, "InvalidParameterValue", "associate address, need a non-empty instanceID: %q", instID)
+	case ipAddr == "":
+		fatalf(400, "InvalidParameterValue", "associate address, need a non-empty address: %q", ipAddr)
+	}
+
+	addr, ok := srv.addresses[ipAddr]
+	if !ok {
+		fatalf(400, "InvalidParameterValue", "associate address, no such address: %q", ipAddr)
+	}
+	addr.InstanceId = instID
+	addr.AssociationId = ipAddr + instID + reqId
+
+	return ec2.AssociateAddressResp{
+		RequestId:     reqId,
+		AssociationId: addr.AssociationId,
+	}
+}
+
+func (srv *Server) describeAddresses(w http.ResponseWriter, req *http.Request, reqId string) interface{} {
+	srv.mu.Lock()
+	defer srv.mu.Unlock()
+
+	var resp ec2.DescribeAddressesResp
+	resp.RequestId = reqId
+
+	for _, addr := range srv.addresses {
+		resp.Addresses = append(resp.Addresses, addr)
+	}
+
 	return &resp
 }
 
