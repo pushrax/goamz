@@ -78,6 +78,7 @@ type Instance struct {
 	imageId     string
 	reservation *reservation
 	instType    string
+	launchTime  time.Time
 	state       ec2.InstanceState
 }
 
@@ -534,6 +535,7 @@ func (srv *Server) newInstance(r *reservation, instType string, imageId string, 
 		instType:    instType,
 		imageId:     imageId,
 		state:       state,
+		launchTime:  time.Now(),
 		reservation: r,
 	}
 	srv.instances[inst.id] = inst
@@ -588,6 +590,7 @@ func (inst *Instance) ec2instance() ec2.Instance {
 		InstanceType: inst.instType,
 		ImageId:      inst.imageId,
 		State:        inst.state,
+		LaunchTime:   inst.launchTime.String(),
 		DNSName:      fmt.Sprintf("%s.example.com", inst.id),
 		// TODO the rest
 	}
