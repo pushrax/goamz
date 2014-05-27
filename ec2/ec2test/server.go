@@ -590,7 +590,7 @@ func (inst *Instance) ec2instance() ec2.Instance {
 		InstanceType: inst.instType,
 		ImageId:      inst.imageId,
 		State:        inst.state,
-		LaunchTime:   inst.launchTime.String(),
+		LaunchTime:   inst.launchTime.Format(time.RFC3339Nano),
 		DNSName:      fmt.Sprintf("%s.example.com", inst.id),
 		// TODO the rest
 	}
