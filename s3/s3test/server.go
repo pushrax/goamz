@@ -11,6 +11,7 @@ import (
 	"io"
 	"io/ioutil"
 	"log"
+	"math/rand"
 	"net"
 	"net/http"
 	"net/url"
@@ -51,6 +52,10 @@ type Config struct {
 	// all other regions.
 	// http://docs.amazonwebservices.com/AmazonS3/latest/API/ErrorResponses.html
 	Send409Conflict bool
+
+	AfterCalls int
+	SendErrors []s3.Error
+	ErrorRate  float64
 }
 
 func (c *Config) send409Conflict() bool {
@@ -123,6 +128,14 @@ func (srv *Server) URL() string {
 	return srv.url
 }
 
+func (srv *Server) SendErrors(afterCalls int, rate float64, errs []s3.Error) {
+	srv.mu.Lock()
+	defer srv.mu.Unlock()
+	srv.config.AfterCalls = afterCalls
+	srv.config.SendErrors = errs
+	srv.config.ErrorRate = rate
+}
+
 func (srv *Server) Buckets() map[string]Bucket {
 	srv.mu.Lock()
 	defer srv.mu.Unlock()
@@ -189,6 +202,16 @@ func (srv *Server) serveHTTP(w http.ResponseWriter, req *http.Request) {
 			panic(err)
 		}
 	}()
+
+	// answer with a random error, if error rate says so
+	if len(srv.config.SendErrors) != 0 &&
+		srv.config.AfterCalls <= 0 &&
+		rand.Float64() <= srv.config.ErrorRate {
+		randIdx := rand.Intn(len(srv.config.SendErrors))
+		err := srv.config.SendErrors[randIdx]
+		fatalf(err.StatusCode, err.Message, "randomly issuing error %#v", err)
+	}
+	srv.config.AfterCalls--
 
 	r = srv.resourceForURL(req.URL)
 
