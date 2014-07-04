@@ -205,6 +205,7 @@ func (srv *Server) serveHTTP(w http.ResponseWriter, req *http.Request) {
 	default:
 		fatalf(400, "MethodNotAllowed", "unknown http request method %q", req.Method)
 	}
+
 	if resp != nil && req.Method != "HEAD" {
 		xmlMarshal(w, resp)
 	}
@@ -613,6 +614,7 @@ func (objr objectResource) put(a *action) interface{} {
 		}
 	}
 
+	var resp *s3.CopyObjectResult
 	source := a.req.Header.Get("x-amz-copy-source")
 	if source != "" {
 		parts := strings.SplitN(source, "/", 2)
@@ -626,6 +628,11 @@ func (objr objectResource) put(a *action) interface{} {
 		}
 		obj.Data = srcObj.Data
 		obj.Checksum = srcObj.Checksum
+
+		resp = &s3.CopyObjectResult{
+			ETag:         srcObj.S3Key().ETag,
+			LastModified: srcObj.S3Key().LastModified,
+		}
 	} else {
 		obj.Data = data
 		obj.Checksum = gotHash
@@ -633,7 +640,7 @@ func (objr objectResource) put(a *action) interface{} {
 
 	obj.Mtime = time.Now()
 	objr.bucket.Objects[objr.name] = obj
-	return nil
+	return resp
 }
 
 func (objr objectResource) delete(a *action) interface{} {
