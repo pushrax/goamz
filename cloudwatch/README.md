@@ -1,7 +1,7 @@
 #GoLang AWS Cloudwatch
 
 ## Installation
-Please refer to the project's main page at [https://github.com/crowdmob/goamz](https://github.com/crowdmob/goamz) for instructions about how to install.
+Please refer to the project's main page at [https://github.com/aybabtme/goamz](https://github.com/aybabtme/goamz) for instructions about how to install.
 
 ## Available methods
 
@@ -30,15 +30,15 @@ import (
     "fmt"
     "time"
     "os"
-    "github.com/crowdmob/goamz/aws"
-    "github.com/crowdmob/goamz/cloudwatch"
+    "github.com/aybabtme/goamz/aws"
+    "github.com/aybabtme/goamz/cloudwatch"
 )
 
 func test_get_metric_statistics() {
     region := aws.Regions["a_region"]
     namespace:= "AWS/ELB"
     dimension  := &cloudwatch.Dimension{
-                                         Name: "LoadBalancerName", 
+                                         Name: "LoadBalancerName",
                                          Value: "your_value",
                                        }
     metricName := "RequestCount"
@@ -79,8 +79,8 @@ import (
     "fmt"
     "time"
     "os"
-    "github.com/crowdmob/goamz/aws"
-    "github.com/crowdmob/goamz/cloudwatch"
+    "github.com/aybabtme/goamz/aws"
+    "github.com/aybabtme/goamz/cloudwatch"
 )
 
 func test_list_metrics() {

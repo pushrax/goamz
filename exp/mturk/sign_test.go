@@ -1,8 +1,8 @@
 package mturk_test
 
 import (
-	"github.com/crowdmob/goamz/aws"
-	"github.com/crowdmob/goamz/exp/mturk"
+	"github.com/aybabtme/goamz/aws"
+	"github.com/aybabtme/goamz/exp/mturk"
 	"gopkg.in/check.v1"
 )
 

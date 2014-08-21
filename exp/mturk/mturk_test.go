@@ -1,9 +1,9 @@
 package mturk_test
 
 import (
-	"github.com/crowdmob/goamz/aws"
-	"github.com/crowdmob/goamz/exp/mturk"
-	"github.com/crowdmob/goamz/testutil"
+	"github.com/aybabtme/goamz/aws"
+	"github.com/aybabtme/goamz/exp/mturk"
+	"github.com/aybabtme/goamz/testutil"
 	"gopkg.in/check.v1"
 	"net/url"
 	"testing"
