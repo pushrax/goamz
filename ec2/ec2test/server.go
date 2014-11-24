@@ -8,7 +8,7 @@ import (
 	"encoding/base64"
 	"encoding/xml"
 	"fmt"
-	"github.com/aybabtme/goamz/ec2"
+	"github.com/pushrax/goamz/ec2"
 	"io"
 	"net/http"
 	"net/http/httptest"

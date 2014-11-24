@@ -13,7 +13,7 @@ import (
 	"encoding/xml"
 	"errors"
 	"fmt"
-	"github.com/aybabtme/goamz/aws"
+	"github.com/pushrax/goamz/aws"
 	"io"
 	"io/ioutil"
 	"log"

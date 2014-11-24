@@ -3,7 +3,7 @@ package sqs
 import (
 	"crypto/md5"
 	"fmt"
-	"github.com/aybabtme/goamz/aws"
+	"github.com/pushrax/goamz/aws"
 	"gopkg.in/check.v1"
 	"hash"
 )

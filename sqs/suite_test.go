@@ -3,7 +3,7 @@ package sqs
 import (
 	"flag"
 	"fmt"
-	"github.com/aybabtme/goamz/aws"
+	"github.com/pushrax/goamz/aws"
 	"gopkg.in/check.v1"
 	"net/http"
 	"net/url"

@@ -4,7 +4,7 @@ package elb
 import (
 	"encoding/xml"
 	"fmt"
-	"github.com/aybabtme/goamz/aws"
+	"github.com/pushrax/goamz/aws"
 	"net/http"
 	"net/url"
 	"strconv"

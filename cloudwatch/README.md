@@ -1,7 +1,7 @@
 #GoLang AWS Cloudwatch
 
 ## Installation
-Please refer to the project's main page at [https://github.com/aybabtme/goamz](https://github.com/aybabtme/goamz) for instructions about how to install.
+Please refer to the project's main page at [https://github.com/pushrax/goamz](https://github.com/pushrax/goamz) for instructions about how to install.
 
 ## Available methods
 
@@ -30,8 +30,8 @@ import (
     "fmt"
     "time"
     "os"
-    "github.com/aybabtme/goamz/aws"
-    "github.com/aybabtme/goamz/cloudwatch"
+    "github.com/pushrax/goamz/aws"
+    "github.com/pushrax/goamz/cloudwatch"
 )
 
 func test_get_metric_statistics() {
@@ -79,8 +79,8 @@ import (
     "fmt"
     "time"
     "os"
-    "github.com/aybabtme/goamz/aws"
-    "github.com/aybabtme/goamz/cloudwatch"
+    "github.com/pushrax/goamz/aws"
+    "github.com/pushrax/goamz/cloudwatch"
 )
 
 func test_list_metrics() {

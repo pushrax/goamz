@@ -1,8 +1,8 @@
 package dynamodb_test
 
 import (
-	"github.com/aybabtme/goamz/aws"
-	"github.com/aybabtme/goamz/dynamodb"
+	"github.com/pushrax/goamz/aws"
+	"github.com/pushrax/goamz/dynamodb"
 	simplejson "github.com/bitly/go-simplejson"
 	"gopkg.in/check.v1"
 )
