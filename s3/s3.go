@@ -591,6 +591,43 @@ func (b *Bucket) List(prefix, delim, marker string, max int) (result *ListResp, 
 	return result, nil
 }
 
+type PermissionsResp struct {
+	Owner             Owner
+	AccessControlList []Grant `xml:">Grant"`
+}
+
+type Grant struct {
+	Grantee    Grantee
+	Permission string
+}
+
+type Grantee struct {
+	Owner
+	URI string // Optionally set.
+}
+
+func (b *Bucket) GetPermissions(path string) (result *PermissionsResp, err error) {
+	params := map[string][]string{"acl": {""}}
+	req := &request{
+		bucket: b.Name,
+		params: params,
+		path:   path,
+	}
+
+	result = &PermissionsResp{}
+	for attempt := attempts.Start(); attempt.Next(); {
+		err = b.S3.query(req, result)
+		if !shouldRetry(err) {
+			break
+		}
+	}
+
+	if err != nil {
+		return nil, err
+	}
+	return result, nil
+}
+
 // The VersionsResp type holds the results of a list bucket Versions operation.
 type VersionsResp struct {
 	Name            string
